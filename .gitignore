@@ -4,3 +4,5 @@ __pycache__/
 db.sqlite3
 chroma_db/
 .vs/
+*.py[cod]
+chroma_db/
