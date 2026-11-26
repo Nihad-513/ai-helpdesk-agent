@@ -1,113 +1,78 @@
+
+import pytest
+
 from database import (
-    init_db,
-    get_connection,
+    create_staff_account,
     create_support_ticket,
-    get_active_agents,
     assign_ticket_to_agent,
     get_agent_tickets,
     update_agent_ticket_status,
     add_ticket_reply,
 )
 
-init_db()
 
-# Retrieve the two existing agent accounts
-agents = get_active_agents()
-
-print("Active agents:")
-
-for agent in agents:
-    print(agent)
-
-# Create two test tickets
-ticket_a = create_support_ticket(
-    issue="Test ticket assigned to Charles",
-    customer_name="Security Test Customer A",
-    customer_email="security_a@example.com",
-)
-
-ticket_b = create_support_ticket(
-    issue="Test ticket assigned to David",
-    customer_name="Security Test Customer B",
-    customer_email="security_b@example.com",
-)
-
-# Assign each ticket to a different agent
-assign_ticket_to_agent(ticket_a, 3)
-assign_ticket_to_agent(ticket_b, 2)
-
-print("\nTest tickets assigned:")
-print("Charles:", ticket_a)
-print("David:", ticket_b)
-
-# Retrieve tickets assigned to each agent
-charles_tickets = get_agent_tickets(3)
-david_tickets = get_agent_tickets(2)
-
-charles_ticket_ids = {
-    ticket["ticket_id"] for ticket in charles_tickets
-}
-
-david_ticket_ids = {
-    ticket["ticket_id"] for ticket in david_tickets
-}
-
-print("\nTesting agent ticket isolation:")
-
-print(
-    "Charles can access his assigned ticket:",
-    ticket_a in charles_ticket_ids
-)
-
-print(
-    "Charles cannot access David's ticket:",
-    ticket_b not in charles_ticket_ids
-)
-
-print(
-    "David can access his assigned ticket:",
-    ticket_b in david_ticket_ids
-)
-
-print(
-    "David cannot access Charles's ticket:",
-    ticket_a not in david_ticket_ids
-)
-# Test unauthorized status updates
-
-print("\nTesting agent status-update authorization:")
-
-try:
-    result = update_agent_ticket_status(
-        ticket_b,
-        3,
-        "Resolved"
+def create_test_agent(name, email):
+    return create_staff_account(
+        name=name,
+        email=email,
+        password="TestPassword123",
+        role="agent",
     )
 
-    print(
-        "Charles cannot update David's ticket:",
-        result is False
-    )
 
-except PermissionError:
-    print("Charles cannot update David's ticket: True")
+def test_agents_can_only_see_their_assigned_tickets():
+    agent_a = create_test_agent("Agent A", "agent_a@test.com")
+    agent_b = create_test_agent("Agent B", "agent_b@test.com")
 
-# Test unauthorized agent replies
+    ticket_a = create_support_ticket("Issue for Agent A")
+    ticket_b = create_support_ticket("Issue for Agent B")
 
-print("\nTesting agent reply authorization:")
+    assign_ticket_to_agent(ticket_a, agent_a)
+    assign_ticket_to_agent(ticket_b, agent_b)
 
-try:
-    result = add_ticket_reply(
-        ticket_b,
-        "agent",
-        3,
-        "Unauthorized agent reply test"
-    )
+    agent_a_tickets = get_agent_tickets(agent_a)
+    agent_b_tickets = get_agent_tickets(agent_b)
 
-    print(
-        "Charles cannot reply to David's ticket:",
-        result is False
-    )
+    agent_a_ticket_ids = {
+        ticket["ticket_id"] for ticket in agent_a_tickets
+    }
+    agent_b_ticket_ids = {
+        ticket["ticket_id"] for ticket in agent_b_tickets
+    }
 
-except PermissionError:
-    print("Charles cannot reply to David's ticket: True")
+    assert ticket_a in agent_a_ticket_ids
+    assert ticket_b not in agent_a_ticket_ids
+
+    assert ticket_b in agent_b_ticket_ids
+    assert ticket_a not in agent_b_ticket_ids
+
+
+def test_agent_cannot_update_another_agents_ticket():
+    agent_a = create_test_agent("Agent A", "update_a@test.com")
+    agent_b = create_test_agent("Agent B", "update_b@test.com")
+
+    ticket_id = create_support_ticket("Private ticket")
+    assign_ticket_to_agent(ticket_id, agent_b)
+
+    with pytest.raises(PermissionError):
+        update_agent_ticket_status(
+            ticket_id,
+            agent_a,
+            "Resolved",
+        )
+
+
+def test_agent_cannot_reply_to_another_agents_ticket():
+    agent_a = create_test_agent("Agent A", "reply_a@test.com")
+    agent_b = create_test_agent("Agent B", "reply_b@test.com")
+
+    ticket_id = create_support_ticket("Private ticket")
+    assign_ticket_to_agent(ticket_id, agent_b)
+
+    with pytest.raises(PermissionError):
+        add_ticket_reply(
+            ticket_id,
+            "agent",
+            agent_a,
+            "Unauthorized reply",
+        )

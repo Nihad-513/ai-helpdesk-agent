@@ -1,66 +1,83 @@
 
+import pytest
+
 from database import (
-    init_db,
     register_customer,
     authenticate_customer,
     get_customer_by_email,
 )
 
-init_db()
 
-test_email = "auth_test@beanbrew.com"
-test_password = "TestPassword123"
-
-print("\nTesting customer registration:")
-
-try:
+def test_customer_registration():
     customer_id = register_customer(
         name="Test Customer",
-        email=test_email,
-        password=test_password,
+        email="auth_test@beanbrew.com",
+        password="TestPassword123",
     )
-    print("Registration successful!")
-    print("Customer ID:", customer_id)
 
-except ValueError as exc:
-    print("Registration:", exc)
+    assert customer_id is not None
 
+    customer = get_customer_by_email("auth_test@beanbrew.com")
 
-print("\nTesting customer login:")
-
-customer = authenticate_customer(
-    test_email,
-    test_password,
-)
-
-print("Login successful!" if customer else "Login failed!")
-print("Customer:", customer)
+    assert customer is not None
+    assert customer["name"] == "Test Customer"
+    assert customer["email"] == "auth_test@beanbrew.com"
 
 
-print("\nTesting incorrect password:")
-
-wrong_login = authenticate_customer(
-    test_email,
-    "WrongPassword123",
-)
-
-print("Rejected successfully!" if wrong_login is None else "Unexpected login!")
-
-
-print("\nTesting duplicate registration:")
-
-try:
+def test_customer_login_with_correct_password():
     register_customer(
-        name="Another Customer",
-        email=test_email,
-        password=test_password,
+        name="Test Customer",
+        email="login_test@beanbrew.com",
+        password="TestPassword123",
     )
-    print("Unexpected duplicate registration!")
 
-except ValueError as exc:
-    print("Duplicate prevented:", exc)
+    customer = authenticate_customer(
+        "login_test@beanbrew.com",
+        "TestPassword123",
+    )
+
+    assert customer is not None
+    assert customer["email"] == "login_test@beanbrew.com"
 
 
-print("\nTesting customer lookup:")
+def test_customer_login_rejects_wrong_password():
+    register_customer(
+        name="Test Customer",
+        email="wrong_password@beanbrew.com",
+        password="TestPassword123",
+    )
 
-print(get_customer_by_email(test_email))
+    customer = authenticate_customer(
+        "wrong_password@beanbrew.com",
+        "WrongPassword123",
+    )
+
+    assert customer is None
+
+
+def test_duplicate_customer_registration_is_rejected():
+    register_customer(
+        name="Test Customer",
+        email="duplicate@beanbrew.com",
+        password="TestPassword123",
+    )
+
+    with pytest.raises(ValueError):
+        register_customer(
+            name="Another Customer",
+            email="duplicate@beanbrew.com",
+            password="TestPassword123",
+        )
+
+
+def test_customer_lookup_does_not_expose_password_hash():
+    register_customer(
+        name="Test Customer",
+        email="lookup@beanbrew.com",
+        password="TestPassword123",
+    )
+
+    customer = get_customer_by_email("lookup@beanbrew.com")
+
+    assert customer is not None
+    assert "password_hash" not in customer

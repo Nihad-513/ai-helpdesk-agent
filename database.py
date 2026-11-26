@@ -5,10 +5,11 @@ import sqlite3
 from pathlib import Path
 import uuid
 import bcrypt
+import os
 
-
-DB_PATH = Path(__file__).parent / "bean_brew.db"
-
+DB_PATH = Path(
+           os.getenv("BEAN_BREW_DB_PATH", Path(__file__).parent / "bean_brew.db")
+)
 
 def get_connection():
     """Create and return a database connection."""

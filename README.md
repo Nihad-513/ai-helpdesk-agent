@@ -167,7 +167,7 @@ ai-helpdesk-agent/
 ### 1. Clone the repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone <https://github.com/Nihad-513/ai-helpdesk-agent.git>
 cd ai-helpdesk-agent
 ```
 

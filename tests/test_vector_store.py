@@ -1,37 +1,114 @@
+import pytest
 
-from rag.document_loader import load_documents
-from rag.text_splitter import split_documents
 from rag.vector_store import VectorStore
 
 
-# Load documents
-documents = load_documents("data/knowledge_base")
+@pytest.fixture
+def vector_store(tmp_path):
+    return VectorStore(
+        db_path=str(tmp_path / "test_chroma_db"),
+        collection_name="test_bean_brew_knowledge",
+    )
 
-# Split documents
 
-chunks = split_documents(
-    documents,
-    chunk_size=300,
-    chunk_overlap=0,
-)
+def test_documents_can_be_added_to_vector_store(vector_store):
+    chunks = [
+        {
+            "text": "Standard shipping takes 3-5 business days.",
+            "metadata": {
+                "source": "shipping.txt",
+                "chunk_index": 0,
+            },
+        },
+        {
+            "text": "Customers can return products within 30 days.",
+            "metadata": {
+                "source": "returns.txt",
+                "chunk_index": 0,
+            },
+        },
+    ]
 
-# Initialize vector database
-vector_store = VectorStore()
+    vector_store.add_documents(chunks)
 
-# Clear old chunks before rebuilding
-vector_store.clear()
+    assert vector_store.collection.count() == 2
 
-# Store chunks
-vector_store.add_documents(chunks)
 
-# Search the knowledge base
-query = "How long does shipping take?"
+def test_all_stored_documents_can_be_retrieved(vector_store):
+    chunks = [
+        {
+            "text": "Standard shipping takes 3-5 business days.",
+            "metadata": {
+                "source": "shipping.txt",
+                "chunk_index": 0,
+            },
+        }
+    ]
 
-results = vector_store.search(query, n_results=3)
+    vector_store.add_documents(chunks)
 
-print("\nSearch results:")
+    documents = vector_store.get_all_documents()
 
-for result in results:
-    print("\nSource:", result["metadata"]["source"])
-    print("Distance:", result["distance"])
-    print("Content:", result["text"])
+    assert len(documents) == 1
+    assert documents[0]["text"] == (
+        "Standard shipping takes 3-5 business days."
+    )
+    assert documents[0]["metadata"]["source"] == "shipping.txt"
+
+
+def test_search_returns_relevant_documents(vector_store):
+    chunks = [
+        {
+            "text": "Standard shipping takes 3-5 business days.",
+            "metadata": {
+                "source": "shipping.txt",
+                "chunk_index": 0,
+            },
+        },
+        {
+            "text": "Customers can return products within 30 days.",
+            "metadata": {
+                "source": "returns.txt",
+                "chunk_index": 0,
+            },
+        },
+    ]
+
+    vector_store.add_documents(chunks)
+
+    results = vector_store.search(
+        "How long does shipping take?",
+        n_results=2,
+    )
+
+    assert len(results) == 2
+    assert results[0]["metadata"]["source"] == "shipping.txt"
+    assert "shipping" in results[0]["text"].lower()
+    assert "distance" in results[0]
+
+
+def test_search_returns_empty_list_for_empty_collection(vector_store):
+    results = vector_store.search(
+        "How long does shipping take?",
+    )
+
+    assert results == []
+
+
+def test_clear_removes_all_documents(vector_store):
+    chunks = [
+        {
+            "text": "Standard shipping takes 3-5 business days.",
+            "metadata": {
+                "source": "shipping.txt",
+                "chunk_index": 0,
+            },
+        }
+    ]
+
+    vector_store.add_documents(chunks)
+    assert vector_store.collection.count() == 1
+
+    vector_store.clear()
+
+    assert vector_store.collection.count() == 0

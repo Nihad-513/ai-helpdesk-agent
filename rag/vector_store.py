@@ -12,13 +12,19 @@ COLLECTION_NAME = "bean_brew_knowledge"
 
 class VectorStore:
 
-    def __init__(self):
-        self.client = chromadb.PersistentClient(path=DB_PATH)
+
+    def __init__(
+        self,
+        db_path: str = DB_PATH,
+        collection_name: str = COLLECTION_NAME,
+    ):
+        self.client = chromadb.PersistentClient(path=db_path)
 
         self.collection = self.client.get_or_create_collection(
-            name=COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"},
+           name=collection_name,
+           metadata={"hnsw:space": "cosine"},
         )
+
     def clear(self) -> None:
         """Remove all existing documents from the collection."""
 
@@ -77,7 +83,8 @@ class VectorStore:
 
     def search(self, query: str, n_results: int = 3) -> list[dict]:
         """Retrieve the most relevant document chunks."""
-
+        if self.collection.count() == 0:
+           return []
         query_embedding = generate_embeddings([query])[0]
 
         results = self.collection.query(
