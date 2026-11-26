@@ -1,4 +1,4 @@
-
+﻿
 from rag.retriever import Retriever
 
 retriever = Retriever(n_results=3)

@@ -1,8 +1,17 @@
+# Environment variables and secrets
 .env
+
+# Python environment and cache
 .venv/
 __pycache__/
-db.sqlite3
-chroma_db/
-.vs/
 *.py[cod]
+
+# IDE settings
+.vs/
+
+# Local databases
+*.db
+db.sqlite3
+
+# Vector database
 chroma_db/

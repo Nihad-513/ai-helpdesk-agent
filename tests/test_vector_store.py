@@ -8,14 +8,18 @@ from rag.vector_store import VectorStore
 documents = load_documents("data/knowledge_base")
 
 # Split documents
+
 chunks = split_documents(
     documents,
-    chunk_size=500,
-    chunk_overlap=100,
+    chunk_size=300,
+    chunk_overlap=0,
 )
 
 # Initialize vector database
 vector_store = VectorStore()
+
+# Clear old chunks before rebuilding
+vector_store.clear()
 
 # Store chunks
 vector_store.add_documents(chunks)

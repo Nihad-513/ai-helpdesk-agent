@@ -6,8 +6,8 @@ documents = load_documents("data/knowledge_base")
 
 chunks = split_documents(
     documents,
-    chunk_size=100,
-    chunk_overlap=20,
+    chunk_size=250,
+    chunk_overlap=0,
 )
 
 print("\nTotal chunks:", len(chunks))

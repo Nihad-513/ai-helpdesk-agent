@@ -19,7 +19,16 @@ class VectorStore:
             name=COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
         )
+    def clear(self) -> None:
+        """Remove all existing documents from the collection."""
 
+        existing = self.collection.get()
+        existing_ids = existing["ids"]
+
+        if existing_ids:
+            self.collection.delete(ids=existing_ids)
+
+        print("Existing vector-store documents cleared.")
     def add_documents(self, chunks: list[dict]) -> None:
         """Generate embeddings and store document chunks."""
 
@@ -49,6 +58,22 @@ class VectorStore:
         )
 
         print(f"Stored {len(chunks)} chunks in ChromaDB.")
+    def get_all_documents(self) -> list[dict]:
+      """Retrieve all stored document chunks."""
+
+      results = self.collection.get(
+      include=["documents", "metadatas"]
+      )
+
+      documents = []
+
+      for index, document in enumerate(results["documents"]):
+          documents.append({
+             "text": document,
+             "metadata": results["metadatas"][index],
+          })
+
+      return documents
 
     def search(self, query: str, n_results: int = 3) -> list[dict]:
         """Retrieve the most relevant document chunks."""

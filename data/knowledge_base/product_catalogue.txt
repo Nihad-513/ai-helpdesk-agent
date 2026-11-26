@@ -1,0 +1,23 @@
+﻿Bean & Brew Product Catalogue
+
+PRODUCT 1: House Blend Coffee Beans
+Product Type: Whole coffee beans
+Description: A balanced everyday coffee blend with a smooth flavour profile.
+Weight: 250g
+Price: ₹399
+
+PRODUCT 2: Dark Roast Coffee Beans
+Product Type: Whole coffee beans
+Description: A bold, rich coffee with a strong roasted flavour.
+Weight: 250g
+Price: ₹449
+
+PRODUCT 3: Medium Roast Coffee Beans
+Product Type: Whole coffee beans
+Description: A smooth and balanced medium-roast coffee.
+Weight: 250g
+Price: ₹429
+
+PRODUCT AVAILABILITY
+All products listed in this catalogue are available for purchase, subject to stock availability.
+For questions about current stock or product-specific assistance, customers should contact the Bean & Brew support team.
