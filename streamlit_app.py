@@ -5,6 +5,7 @@ from app.auth import show_auth
 from app.dashboard import show_dashboard
 from app.staff_auth import show_staff_login
 from app.staff_dashboard import show_admin_dashboard,show_agent_dashboard
+from database import init_db
 # --------------------------------------------------
 # PAGE CONFIGURATION
 # --------------------------------------------------
@@ -15,6 +16,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+# Initialise the database on application startup
+@st.cache_resource
+def initialize_database():
+    init_db()
+
+initialize_database()
 
 # --------------------------------------------------
 # GLOBAL STYLING

@@ -111,3 +111,14 @@ def test_customer_linked_conversation_can_be_created():
     )
 
     assert conversation_id is not None
+def test_customer_name_is_html_escaped():
+    from app.dashboard import _escape_customer_name
+
+    malicious_name = '<script>alert("XSS")</script>'
+
+    escaped_name = _escape_customer_name(malicious_name)
+
+    assert escaped_name == (
+        '&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;'
+    )
+    assert "<script>" not in escaped_name

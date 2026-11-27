@@ -4,8 +4,7 @@
 import uuid
 
 import streamlit as st
-
-
+import logging
 from database import (
     create_conversation,
     get_conversation_history,
@@ -14,6 +13,7 @@ from database import (
     create_customer_ticket,
     save_message,
 )
+logger = logging.getLogger(__name__)
 from rag.rag_pipeline import RAGPipeline
 
 def is_human_support_request(message: str) -> bool:
@@ -194,7 +194,7 @@ def show_chat(customer):
                 "I'm sorry, I couldn't process your request "
                 "right now. Please try again."
             )
-            print(f"Chat error: {error}")
+            logger.exception("Failed to process customer chat message")
 
     # Display ticket confirmation immediately after processing.
     if st.session_state.get("pending_ticket_issue"):
@@ -239,7 +239,7 @@ def show_chat(customer):
 
                 except Exception as error:
                     st.error("Unable to create your ticket right now.")
-                    print(f"Ticket creation error: {error}")
+                    logger.exception("Failed to create customer support ticket")
 
         with col2:
             if st.button(

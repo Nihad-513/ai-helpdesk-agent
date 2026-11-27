@@ -1,6 +1,6 @@
 
 """Bean & Brew customer dashboard."""
-
+import html
 import streamlit as st
 from app.chat import show_chat
 from database import (
@@ -8,6 +8,10 @@ from database import (
     get_customer_ticket_replies,
     add_ticket_reply,
 )
+
+def _escape_customer_name(name):
+    """Escape customer-provided text before inserting it into HTML."""
+    return html.escape(str(name))
 
 def navigate_to_page(page):
     """Navigate to another dashboard page."""
@@ -61,7 +65,7 @@ def show_dashboard(customer):
         st.markdown(
             f"""
             <div class="welcome-card">
-                <h1>Welcome, {customer['name']}!</h1>
+                <h1>Welcome, {_escape_customer_name(customer['name'])}!</h1>
                 <p>How can we make your Bean & Brew experience better today?</p>
             </div>
             """,

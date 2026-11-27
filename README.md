@@ -109,6 +109,8 @@ The knowledge base is processed through the following stages:
 
 ## Project Structure
 
+
+
 ```text
 ai-helpdesk-agent/
 │
@@ -135,9 +137,15 @@ ai-helpdesk-agent/
 │
 ├── scripts/
 │   ├── check_groq.py
-│   └── list_gemini_models.py
+│   ├── ingest_knowledge_base.py
+│   ├── list_gemini_models.py
+│   ├── manual_rag_smoke_test.py
+│   ├── manual_retrieval_smoke_test.py
+│   ├── manual_ticket_lookup.py
+│   └── manual_ticket_update.py
 │
 ├── tests/
+│   ├── conftest.py
 │   ├── run_regression.py
 │   ├── test_agent_security.py
 │   ├── test_auth.py
@@ -149,7 +157,11 @@ ai-helpdesk-agent/
 │   ├── test_rag_responses.py
 │   ├── test_retrieval_edge_cases.py
 │   ├── test_retrieval_quality.py
-│   └── ...
+│   ├── test_retriever_fallback.py
+│   ├── test_saved_conversation.py
+│   ├── test_splitter.py
+│   ├── test_tickets.py
+│   └── test_vector_store.py
 │
 ├── create_first_admin.py
 ├── create_staff_agent.py
@@ -158,9 +170,12 @@ ai-helpdesk-agent/
 ├── streamlit_app.py
 ├── chat_cli.py
 ├── requirements.txt
+├── requirements-dev.txt
 ├── .env.example
-└── .gitignore
+├── .gitignore
+└── README.md
 ```
+
 
 ## Installation and Setup
 
@@ -198,13 +213,28 @@ GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=your_gemini_model_name
 GEMINI_FALLBACK_MODELS=your_fallback_model_names
 GROQ_API_KEY=your_groq_api_key
+
+BEAN_BREW_DB_PATH=bean_brew.db
+CHROMA_DB_PATH=chroma_db
 ```
 
 Add your own API credentials. Never commit `.env` or expose API keys publicly.
 
 **Note:** The RAG pipeline currently uses Groq for response generation. Gemini is configured as an additional LLM integration.
 
-### 5. Initialise the administrator account
+### 5. Ingest the knowledge base
+
+Before launching the application, process and index the product catalogue and store-policy documents:
+
+```powershell
+python -m scripts.ingest_knowledge_base
+```
+
+This command loads the documents from `data/knowledge_base/`, splits them into chunks, generates embeddings using Sentence Transformers, and synchronises the resulting vectors with ChromaDB.
+
+Run this command whenever you add, modify, or remove knowledge-base documents.
+
+### 6. Initialise the administrator account
 
 Run:
 
@@ -214,7 +244,7 @@ python create_first_admin.py
 
 Follow the prompts to create the initial administrator account.
 
-### 6. Create support-agent accounts
+### 7. Create support-agent accounts
 
 After initial setup, create additional support agents using:
 
@@ -222,47 +252,86 @@ After initial setup, create additional support agents using:
 python create_staff_agent.py
 ```
 
-### 7. Launch the application
+### 8. Launch the application
 
 ```powershell
 streamlit run streamlit_app.py
 ```
+### 9. Persistent Storage
 
-The application will open in your browser.
+The application uses two local storage locations:
+
+- `BEAN_BREW_DB_PATH`: SQLite database containing customer accounts, staff accounts, conversations, messages, and support tickets.
+- `CHROMA_DB_PATH`: ChromaDB directory containing the knowledge-base embeddings.
+
+For hosted deployments, configure both paths to point to persistent storage locations or mounted volumes provided by the hosting platform.
+
+**Important:** Do not rely on temporary application storage for production data. Without persistent storage, customer records, conversations, tickets, and indexed knowledge-base data may be lost when the application is restarted or redeployed.
+
+
 
 ## Testing
 
-The project includes tests covering:
+The project includes automated tests and dedicated RAG regression evaluations covering:
 
-- Retrieval quality.
-- Retrieval edge cases.
-- RAG response generation.
+- Retrieval quality and relevance.
+- Retrieval edge cases and out-of-scope questions.
+- RAG response quality and knowledge grounding.
 - Context-aware follow-up questions.
 - Authentication and access control.
 - Customer data isolation.
 - Ticket operations.
 - Embedding generation and document processing.
+- Vector-store synchronisation and retrieval fallback.
 
-Run the RAG regression suite:
+### Run automated tests
+
+```powershell
+python -m pytest -v
+```
+
+**Latest result:** 40 passed, 0 failed.
+
+### Run RAG regression evaluations
 
 ```powershell
 python -m tests.run_regression
 ```
 
-**Current RAG regression result:** 26/26 checks passed across four suites.
+**Latest result:** 26/26 checks passed across four suites:
 
-The regression runner covers the RAG-related suites; the other database and security scripts are separate checks.
+| Regression suite | Passed |
+|---|---:|
+| Retrieval quality | 6/6 |
+| Retrieval edge cases | 8/8 |
+| RAG response evaluation | 8/8 |
+| RAG follow-up handling | 4/4 |
+| **Total** | **26/26** |
+
+The regression evaluations overlap with some of the automated test coverage; these results are reported separately.
 
 ## Current Development Status
 
-The project has working customer and staff workflows, persistent application data, a hybrid RAG retrieval pipeline, and regression coverage for core RAG behaviour.
+The core application is implemented and functional, with the following components completed:
 
-Further improvements can include:
+- Customer registration, authentication, and dashboard.
+- AI-powered support chat using a hybrid RAG pipeline.
+- Persistent conversation history and support-ticket management.
+- Separate administrator and support-agent workflows.
+- Role-based access controls and customer data isolation.
+- Automated testing and dedicated RAG regression evaluations.
+
+**Latest verification results:**
+- Automated test suite: 40 passed.
+- RAG regression evaluations: 26/26 checks passed.
+
+### Potential Future Improvements
+
 - More comprehensive automated integration tests.
-- Improved evaluation of retrieval relevance and answer quality.
 - Expanded knowledge-base ingestion and document management.
-- Production deployment with persistent database and vector storage.
-- Monitoring, logging, and analytics for support operations.
+- Further evaluation of retrieval relevance and answer quality.
+- Optional public deployment with persistent storage.
+- Monitoring, logging, and support-operation analytics.
 
 ## Project Objective
 
@@ -272,12 +341,16 @@ This project explores how Retrieval-Augmented Generation can be integrated into 
 
 ### Customer Interface
 
+AI Support Chat – Customers can ask product and policy questions and receive context-grounded responses.
 ![Customer Chat](screenshots/customer-chat.png)
 
+Customer Dashboard – Customers can access their support interface and manage their support tickets.
 ![Customer Dashboard](screenshots/customer-dashboard.png)
 
 ### Staff Interface
 
+Admin Dashboard – Administrators can oversee support operations and manage staff.
 ![Admin Dashboard](screenshots/admin-dashboard.png)
 
+Agent Workspace – Support agents can view assigned tickets and manage customer requests.
 ![Agent Workspace](screenshots/agent-workspace.png)

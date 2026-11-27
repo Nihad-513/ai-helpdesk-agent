@@ -76,3 +76,42 @@ def test_agent_cannot_reply_to_another_agents_ticket():
             agent_a,
             "Unauthorized reply",
         )
+
+def test_agent_cannot_access_admin_dashboard(monkeypatch):
+    import app.staff_dashboard as staff_dashboard
+
+    def stop_dashboard():
+        raise RuntimeError("dashboard blocked")
+
+    monkeypatch.setattr(staff_dashboard.st, "error", lambda message: None)
+    monkeypatch.setattr(staff_dashboard.st, "stop", stop_dashboard)
+    monkeypatch.setattr(
+        staff_dashboard,
+        "get_all_tickets",
+        lambda: pytest.fail("Agent accessed admin ticket data"),
+    )
+
+    with pytest.raises(RuntimeError, match="dashboard blocked"):
+        staff_dashboard.show_admin_dashboard(
+            {"id": 1, "role": "agent"}
+        )
+
+
+def test_admin_cannot_access_agent_dashboard(monkeypatch):
+    import app.staff_dashboard as staff_dashboard
+
+    def stop_dashboard():
+        raise RuntimeError("dashboard blocked")
+
+    monkeypatch.setattr(staff_dashboard.st, "error", lambda message: None)
+    monkeypatch.setattr(staff_dashboard.st, "stop", stop_dashboard)
+    monkeypatch.setattr(
+        staff_dashboard,
+        "get_agent_tickets",
+        lambda agent_id: pytest.fail("Admin accessed agent workspace"),
+    )
+
+    with pytest.raises(RuntimeError, match="dashboard blocked"):
+        staff_dashboard.show_agent_dashboard(
+            {"id": 1, "role": "admin"}
+        )

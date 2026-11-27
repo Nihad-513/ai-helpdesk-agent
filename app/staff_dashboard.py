@@ -16,9 +16,17 @@ from database import (
     add_ticket_reply,
     update_agent_ticket_status,
 )
+def _has_role(staff, expected_role):
+    """Check whether the authenticated staff member has the required role."""
+    return (
+        isinstance(staff, dict)
+        and staff.get("role") == expected_role
+    )
 def show_admin_dashboard(staff):
     """Display the administrator ticket overview."""
-
+    if not _has_role(staff, "admin"):
+        st.error("Access denied. Administrator privileges are required.")
+        st.stop()
     tickets = get_all_tickets()
     agents = get_active_agents()
     st.title("Administrator Dashboard")
@@ -273,7 +281,9 @@ def show_admin_dashboard(staff):
 
 def show_agent_dashboard(staff):
     """Display tickets assigned to the logged-in support agent."""
-
+    if not _has_role(staff, "agent"):
+        st.error("Access denied. Support agent privileges are required.")
+        st.stop()
     agent_id = staff["id"]
     tickets = get_agent_tickets(agent_id)
 

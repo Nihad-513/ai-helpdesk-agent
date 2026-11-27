@@ -15,3 +15,16 @@ db.sqlite3
 
 # Vector database
 chroma_db/
+
+# Deployment verification data
+deployment_test/
+
+# Test and coverage artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Python packaging
+build/
+dist/
+*.egg-info/

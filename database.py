@@ -6,19 +6,31 @@ from pathlib import Path
 import uuid
 import bcrypt
 import os
+from contextlib import contextmanager
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DB_PATH = Path(
            os.getenv("BEAN_BREW_DB_PATH", Path(__file__).parent / "bean_brew.db")
 )
 
-def get_connection():
-    """Create and return a database connection."""
 
+@contextmanager
+def get_connection():
+    """Create, manage, and close a database connection."""
     connection = sqlite3.connect(DB_PATH)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
 
-    return connection
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 

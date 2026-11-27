@@ -1,12 +1,22 @@
 
 """Store and search document embeddings using ChromaDB."""
 
+
+import os
+from dotenv import load_dotenv
 import chromadb
+
 
 from rag.embeddings import generate_embeddings
 
+load_dotenv()
 
-DB_PATH = "chroma_db"
+
+DB_PATH = os.getenv(
+    "CHROMA_DB_PATH",
+    "chroma_db",
+)
+
 COLLECTION_NAME = "bean_brew_knowledge"
 
 
@@ -64,6 +74,34 @@ class VectorStore:
         )
 
         print(f"Stored {len(chunks)} chunks in ChromaDB.")
+
+    def sync_documents(self, chunks: list[dict]) -> None:
+        """Synchronise the collection with the current knowledge base."""
+        if not chunks:
+           raise ValueError("Cannot synchronise an empty knowledge base.")
+        expected_ids = {
+            f"{chunk['metadata']['source']}_{chunk['metadata']['chunk_index']}"
+            for chunk in chunks
+        }
+
+        existing = self.collection.get()
+
+        obsolete_ids = [
+            document_id
+            for document_id in existing["ids"]
+            if document_id not in expected_ids
+        ]
+
+        if obsolete_ids:
+            self.collection.delete(ids=obsolete_ids)
+            print(f"Removed {len(obsolete_ids)} obsolete chunks.")
+
+        self.add_documents(chunks)
+
+        print("Knowledge-base synchronisation completed.")
+
+
+
     def get_all_documents(self) -> list[dict]:
       """Retrieve all stored document chunks."""
 

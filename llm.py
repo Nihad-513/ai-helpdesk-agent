@@ -16,17 +16,29 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from groq import Groq
+from functools import lru_cache
 
 
 load_dotenv()
 
-_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+@lru_cache(maxsize=1)
+def _get_gemini_client():
+    api_key = os.getenv("GEMINI_API_KEY")
 
-_groq_client = Groq(
-    api_key=os.environ["GROQ_API_KEY"]
-)
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not configured.")
+
+    return genai.Client(api_key=api_key)
 
 
+@lru_cache(maxsize=1)
+def _get_groq_client():
+    api_key = os.getenv("GROQ_API_KEY")
+
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY is not configured.")
+
+    return Groq(api_key=api_key)
 GROQ_MODEL = "openai/gpt-oss-20b"
 
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
@@ -78,7 +90,7 @@ def chat(
     for model in [MODEL, *FALLBACKS]:
         for attempt in range(retries):
             try:
-                response = _client.models.generate_content(
+                response = _get_gemini_client().models.generate_content(
                     model=model,
                     contents=contents,
                     config=config,
@@ -100,20 +112,43 @@ def chat(
     assert last_error is not None
     raise last_error
 
+
+
+
 def groq_chat(
     messages: list[dict],
     system: str,
     temperature: float = 0.3,
+    retries: int = 3,
 ) -> str:
-    """Send a conversation to Groq and return its reply."""
+    """Send a conversation to Groq with retries for temporary failures."""
+    if retries < 1:
+        raise ValueError("Retries must be at least 1.")
+    last_error = None
 
-    response = _groq_client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=[
-            {"role": "system", "content": system},
-            *messages,
-        ],
-        temperature=temperature,
-    )
+    for attempt in range(retries):
+        try:
+            response = _get_groq_client().chat.completions.create(
+                model=GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": system},
+                    *messages,
+                ],
+                temperature=temperature,
+            )
 
-    return response.choices[0].message.content or ""
+            return response.choices[0].message.content or ""
+
+        except Exception as exc:
+            last_error = exc
+
+            # Retry rate limits and temporary server errors.
+            status_code = getattr(exc, "status_code", None)
+
+            if status_code not in (429, 500, 502, 503, 504):
+                raise
+
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt)
+
+    raise last_error

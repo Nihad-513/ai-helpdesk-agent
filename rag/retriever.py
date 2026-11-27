@@ -7,6 +7,9 @@ from rank_bm25 import BM25Okapi
 
 from rag.vector_store import VectorStore
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Retriever:
 
@@ -80,10 +83,14 @@ class Retriever:
         normalized_query = " ".join(self._tokenize(query))
 
         # Semantic search
-        semantic_results = self.vector_store.search(
-            query=normalized_query,
-            n_results=len(self.documents),
-        )
+        try:
+           semantic_results = self.vector_store.search(
+               query=normalized_query,
+               n_results=len(self.documents),
+           )
+        except Exception:
+            logger.exception("Semantic search failed; continuing with BM25.")
+            semantic_results = []
 
         semantic_ranks = {
             (
@@ -139,7 +146,8 @@ class Retriever:
                 document["metadata"]["chunk_index"],
             )
 
-            distance = semantic_distances.get(key, 1.0)
+
+            distance = semantic_distances.get(key)
 
             keyword_score = (
                 float(keyword_scores[index])
@@ -148,9 +156,11 @@ class Retriever:
             )
 
             # Reject weak matches from both retrieval methods.
-            if distance > 0.57 and keyword_score < 2.5:
+            if distance is not None and distance > 0.57 and keyword_score < 2.5:
                 continue
 
+            if distance is None and keyword_score <= 0:
+                continue
             semantic_rank = semantic_ranks.get(key)
             keyword_rank = keyword_ranks.get(key)
 

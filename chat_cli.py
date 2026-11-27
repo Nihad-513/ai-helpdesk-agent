@@ -9,7 +9,6 @@ from database import (
     save_message,
     get_conversation_history,
     create_support_ticket,
-    get_support_ticket,
 )
 from rag.rag_pipeline import RAGPipeline
 
@@ -29,7 +28,6 @@ def main() -> None:
     pending_ticket_issue = None
     pending_ticket_name = None
     ticket_creation_step = None
-    ticket_lookup_pending = False
     ticket_confirmation_pending = False
 
     print("\nBean & Brew AI Support")
